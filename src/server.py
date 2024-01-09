@@ -6,6 +6,7 @@ import asyncio
 from src.audio_utils import save_audio_to_file
 from src.client import Client
 
+
 class Server:
     """
     Represents the WebSocket server for handling real-time audio transcription.
@@ -23,6 +24,7 @@ class Server:
         samples_width (int): The width of each audio sample in bits.
         connected_clients (dict): A dictionary mapping client IDs to Client objects.
     """
+
     def __init__(self, vad_pipeline, asr_pipeline, host='localhost', port=8765, sampling_rate=16000, samples_width=2):
         self.vad_pipeline = vad_pipeline
         self.asr_pipeline = asr_pipeline
@@ -48,7 +50,6 @@ class Server:
 
             # this is synchronous, any async operation is in BufferingStrategy
             client.process_audio(websocket, self.vad_pipeline, self.asr_pipeline)
-
 
     async def handle_websocket(self, websocket, path):
         client_id = str(uuid.uuid4())

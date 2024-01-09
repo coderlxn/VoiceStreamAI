@@ -2,6 +2,9 @@ import os
 import asyncio
 import json
 import time
+import openai
+from openai import AsyncOpenAI
+import logging
 
 from .buffering_strategy_interface import BufferingStrategyInterface
 
@@ -44,6 +47,8 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         
         self.processing_flag = False
 
+        self.base_url = os.environ.get("OPENAI_BASE_URL")
+
     def process_audio(self, websocket, vad_pipeline, asr_pipeline):
         """
         Process audio chunks by checking their length and scheduling asynchronous processing.
@@ -66,6 +71,25 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             self.processing_flag = True
             # Schedule the processing in a separate task
             asyncio.create_task(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
+
+    async def get_chat_response(self, messages) -> str:
+        result = []
+        try:
+            aclient = AsyncOpenAI(base_url=self.base_url)
+            response = await aclient.chat.completions.create(model='gpt-3.5-turbo', messages=messages,
+                                                             temperature=1, max_tokens=2048, stream=True)
+            async for chunk in response:
+                chunk_message = chunk.choices[0].delta  # extract the message
+                if chunk_message.content is not None:
+                    chunk_content = chunk_message.content
+                    result.append(chunk_content)
+        except openai.APIError as e:
+            logging.warning(f"openai api error {repr(e)}")
+        except Exception as e:
+            logging.warning(f'query from openai error {repr(e)}')
+        result = ''.join(result)
+        logging.info(f'request {messages} \nchat response {result}')
+        return result
     
     async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline):
         """
@@ -96,6 +120,17 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 transcription['processing_time'] = end - start
                 json_transcription = json.dumps(transcription) 
                 await websocket.send(json_transcription)
+
+                # 从GPT获取数据
+                start = time.time()
+                messages = [{"role": "user", "content": transcription['text']}]
+                content = await self.get_chat_response(messages)
+                end = time.time()
+                result = {'text': content, 'processing_time': end - start}
+                json_transcription = json.dumps(result)
+                logging.info(f'set content to client {json_transcription}')
+                await websocket.send(json_transcription)
+
             self.client.scratch_buffer.clear()
             self.client.increment_file_counter()
         
