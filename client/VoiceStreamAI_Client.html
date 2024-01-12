@@ -73,7 +73,7 @@
     <div class="controls">
         <div class="control-group">
             <label class="label" for="websocketAddress">WebSocket Address:</label>
-            <input type="text" id="websocketAddress" value="ws://localhost:8765">
+            <input type="text" id="websocketAddress" value="ws://localhost:6111">
         </div>
         <div class="control-group">
             <label class="label" for="bufferingStrategySelect" onchange="toggleBufferingStrategyPanel()">Buffering Strategy:</label>
@@ -121,6 +121,12 @@
             </select>
         </div>
         <button onclick="initWebSocket()">Connect</button>
+
+
+
+        <button onclick="TextToSpeaker('你好呀，今天天气真不错，我们出去玩吧。')">SST go</button>
+
+
     </div>
     <button id="startButton" onclick='startRecording()' disabled>Start Streaming</button>
     <button id="stopButton" onclick='stopRecording()' disabled>Stop Streaming</button>

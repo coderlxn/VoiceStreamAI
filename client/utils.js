@@ -9,6 +9,8 @@ let websocket;
 let context;
 let processor;
 let globalStream;
+// 创建一个新的语音合成对象
+let SST ;
 
 const websocket_uri = 'ws://localhost:8765';
 const bufferSize = 4096;
@@ -31,6 +33,7 @@ function initWebSocket() {
         console.log("WebSocket connection established");
         document.getElementById("webSocketStatus").textContent = 'Connected';
         document.getElementById('startButton').disabled = false;
+        SST = new SpeechSynthesisUtterance();
     };
     websocket.onclose = event => {
         console.log("WebSocket connection closed", event);
@@ -49,7 +52,18 @@ function updateTranscription(transcript_data) {
     const transcriptionDiv = document.getElementById('transcription');
     const languageDiv = document.getElementById('detected_language');
 
-    if (transcript_data['words'] && transcript_data['words'].length > 0) {
+    if (transcript_data['ai_resp'] && transcript_data['ai_resp'].length > 0) {
+        var ai_resp = transcript_data['ai_resp'];
+        const span = document.createElement('span');
+        span.textContent = '【AI Resp】: ' + ai_resp ;
+        span.style.color = 'red';
+        transcriptionDiv.appendChild(span);
+        // SST.text = ai_resp;
+        // window.speechSynthesis.speak(SST);
+        let speechInstance = new SpeechSynthesisUtterance(ai_resp);
+        speechSynthesis.speak(speechInstance);
+
+    } else if (transcript_data['words'] && transcript_data['words'].length > 0) {
         // Append words with color based on their probability
         transcript_data['words'].forEach(wordData => {
             const span = document.createElement('span');
@@ -62,18 +76,20 @@ function updateTranscription(transcript_data) {
             } else if (probability > 0.6) {
                 span.style.color = 'orange';
             } else {
-                span.style.color = 'red';
+                span.style.color = 'blue';
             }
 
             transcriptionDiv.appendChild(span);
         });
 
         // Add a new line at the end
-        transcriptionDiv.appendChild(document.createElement('br'));
+        // transcriptionDiv.appendChild(document.createElement('br'));
     } else {
         // Fallback to plain text
         transcriptionDiv.textContent += transcript_data['text'] + '\n';
     }
+    // Add a new line at the end
+    transcriptionDiv.appendChild(document.createElement('br'));
 
     // Update the language information
     if (transcript_data['language'] && transcript_data['language_probability']) {
@@ -213,4 +229,51 @@ function toggleBufferingStrategyPanel() {
         panel.classList.add('hidden');
     }
 }
+let voiceIndex = 156;
+const TextToSpeaker = (text) => {
+    // 创建一个新的 SpeechSynthesisUtterance 实例
+    var utterance = new SpeechSynthesisUtterance(text);
 
+    // 设置指定的语音角色
+    // const xiaoxiao = getSpeaker("Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)");
+    const putong = getSpeaker("Google 普通话（中国大陆）");
+    // if (xiaoxiao) {
+    //   utterance.voice = xiaoxiao;
+    // } else if (putong) {
+    //   utterance.voice = putong;
+    // }
+    const speaker = getSpeakerAt(voiceIndex);
+    console.log('USE voice:' + voiceIndex + " > " + speaker)
+    voiceIndex ++;
+    if(speaker){
+        utterance.voice = speaker
+    }else {
+        console.log('USE voice:' + voiceIndex + " > Google 普通话")
+        utterance.voice = putong
+    }
+
+    // 可以设置朗读的属性，如语速和音调
+    utterance.rate = 1; // 语速，可以是0.1到10之间的值，默认为1
+    utterance.pitch = 1; // 音调，可以是0到2之间的值，默认为1
+
+    // 使用 SpeechSynthesis 接口的 speak 方法开始朗读
+    window.speechSynthesis.speak(utterance);
+  };
+
+const getSpeaker = (speakName) => {
+    const sp = window.speechSynthesis.getVoices().find((voice) => voice.name === speakName);
+    if (sp) {
+      return sp;
+    } else {
+      return null;
+    }
+  };
+
+
+const getSpeakerAt = (index) => {
+    if(index >= 0 && index < window.speechSynthesis.getVoices().length){
+        return window.speechSynthesis.getVoices().at(index);
+    }else{
+        return window.speechSynthesis.getVoices().at(0);
+    }
+  };

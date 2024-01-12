@@ -39,17 +39,20 @@ class Server:
             message = await websocket.recv()
 
             if isinstance(message, bytes):
+                # print(f"接收到新数据:{bytearray(bytes).hex()}")
                 client.append_audio_data(message)
+                # this is synchronous, any async operation is in BufferingStrategy
+                await client.process_audio(websocket, self.vad_pipeline, self.asr_pipeline)
             elif isinstance(message, str):
                 config = json.loads(message)
                 if config.get('type') == 'config':
                     client.update_config(config['data'])
                     continue
+                elif config.get('type') == 'testGPT':
+                    continue
             else:
                 print(f"Unexpected message type from {client.client_id}")
 
-            # this is synchronous, any async operation is in BufferingStrategy
-            client.process_audio(websocket, self.vad_pipeline, self.asr_pipeline)
 
     async def handle_websocket(self, websocket, path):
         client_id = str(uuid.uuid4())
