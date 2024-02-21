@@ -112,7 +112,7 @@ class FasterWhisperASR(ASRInterface):
     def __init__(self, **kwargs):
         model_size = kwargs.get('model_size', "large-v3")
         # Run on GPU with FP16
-        self.asr_pipeline = WhisperModel(model_size, device="cuda", compute_type="float16")
+        self.asr_pipeline = WhisperModel(model_size, device="cuda", compute_type="int8")
 
     async def transcribe(self, client):
         file_path = await save_audio_to_file(client.scratch_buffer, client.get_file_name())

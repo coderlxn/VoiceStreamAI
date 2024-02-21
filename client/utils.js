@@ -58,8 +58,6 @@ function updateTranscription(transcript_data) {
         span.textContent = '【AI Resp】: ' + ai_resp ;
         span.style.color = 'red';
         transcriptionDiv.appendChild(span);
-        // SST.text = ai_resp;
-        // window.speechSynthesis.speak(SST);
         let speechInstance = new SpeechSynthesisUtterance(ai_resp);
         speechSynthesis.speak(speechInstance);
 

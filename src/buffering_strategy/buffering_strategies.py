@@ -5,8 +5,10 @@ import time
 import openai
 from openai import AsyncOpenAI
 import logging
+import base64
 
 from .buffering_strategy_interface import BufferingStrategyInterface
+
 
 class SilenceAtEndOfChunk(BufferingStrategyInterface):
     """
@@ -44,7 +46,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         self.error_if_not_realtime = os.environ.get('ERROR_IF_NOT_REALTIME')
         if not self.error_if_not_realtime:
             self.error_if_not_realtime = kwargs.get('error_if_not_realtime', False)
-        
+
         self.processing_flag = False
 
         self.base_url = os.environ.get("OPENAI_BASE_URL")
@@ -72,7 +74,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
             self.client.scratch_buffer += self.client.buffer
             self.client.buffer.clear()
-            self.processing_flag = True
+            # self.processing_flag = True
             # Schedule the processing in a separate task
             # asyncio.create_task(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
             await self.process_audio_async(websocket, vad_pipeline, asr_pipeline)
@@ -84,14 +86,14 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         result = []
         start = time.time()
         try:
-            aclient = AsyncOpenAI(base_url=self.base_url)
+            aclient = AsyncOpenAI(base_url=self.base_url, timeout=3)
             response = await aclient.chat.completions.create(model='gpt-3.5-turbo', messages=messages,
                                                              temperature=1, max_tokens=2048, stream=True)
 
-            logging.debug("GPT 耗时0 = {:.3f} : s%".format((time.time() - start)), messages)
+            logging.debug("GPT 耗时0 = {:.3f} : s%".format((time.time() - start)))
             async for chunk in response:
                 chunk_message = chunk.choices[0].delta  # extract the message
-                logging.debug("GPT 耗时1 = {:.3f}".format(time.time() - start))
+                # logging.debug("GPT 耗时1 = {:.3f}".format(time.time() - start))
                 if chunk_message.content is not None:
                     chunk_content = chunk_message.content
                     result.append(chunk_content)
@@ -101,7 +103,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             logging.warning(f'query from openai error {repr(e)}')
         logging.debug("GPT 耗时2 = {:.3f}".format(time.time() - start))
         result = ''.join(result)
-        logging.info(f'request {messages} \nchat response {result}')
+        # logging.info(f'request {messages} \nchat response {result}')
         logging.debug("GPT 耗时3 = {:.3f}".format(time.time() - start))
 
         return result
@@ -122,7 +124,23 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             return result
         except Exception as e:
             return repr(e)
-    
+
+    async def text_to_speech(self, websocket, text):
+        client = openai.OpenAI()
+        response = client.audio.speech.create(
+            model="tts-1",
+            voice="alloy",
+            input=text,
+        )
+
+        # response.stream_to_file("output.mp3")
+
+        for data in response.iter_bytes():
+            # logging.debug(f'speech component: {data}')
+            bytes_str = base64.b64encode(data).decode('utf-8')
+            val = {'audio': bytes_str}
+            await websocket.send(json.dumps(val))
+
     async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline):
         """
         Asynchronously process audio for activity detection and transcription.
@@ -134,25 +152,27 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             websocket (Websocket): The WebSocket connection for sending transcriptions.
             vad_pipeline: The voice activity detection pipeline.
             asr_pipeline: The automatic speech recognition pipeline.
-        """   
+        """
         start = time.time()
         vad_results = await vad_pipeline.detect_activity(self.client)
 
-        if len(vad_results) == 0:
+        if len(vad_results) == 0 or self.processing_flag:
             self.client.scratch_buffer.clear()
             self.client.buffer.clear()
-            self.processing_flag = False
             return
-        logging.debug('检测到活动声音')
 
-        last_segment_should_end_before = ((len(self.client.scratch_buffer) / (self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
+        logging.debug('检测到活动声音')
+        self.processing_flag = True
+        last_segment_should_end_before = ((len(self.client.scratch_buffer) / (
+                    self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
         if vad_results[-1]['end'] < last_segment_should_end_before:
             transcription = await asr_pipeline.transcribe(self.client)
             if transcription['text'] != '':
                 end = time.time()
                 logging.debug(f'解析到声音内容： {transcription["text"]}， 耗时: {end - start}')
                 transcription['processing_time'] = end - start
-                json_transcription = json.dumps(transcription) 
+                json_transcription = json.dumps(transcription)
+                logging.debug(f'send text to client： {json_transcription}')
                 await websocket.send(json_transcription)
 
                 # 从GPT获取数据
@@ -164,12 +184,15 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
                 logging.debug("GPT 总耗时 = {:.3f}".format(end - start))
 
-                result = {'ai_resp': content, 'text': content, 'processing_time': end - start}
+                # result = {'ai_resp': content, 'text': content, 'processing_time': end - start}
+                result = {'text': content, 'processing_time': end - start}
                 json_transcription = json.dumps(result)
                 logging.info(f'set content to client {json_transcription}')
                 await websocket.send(json_transcription)
 
+                await self.text_to_speech(websocket, content)
+
             self.client.scratch_buffer.clear()
             self.client.increment_file_counter()
-        
+
         self.processing_flag = False

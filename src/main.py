@@ -24,8 +24,15 @@ def parse_args():
     return parser.parse_args()
 
 
+def should_log(record):
+    if record.name.startswith("websockets.server:"):
+        return False
+    return True
+
+
 def main():
     logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger("websockets").setLevel(logging.WARNING)
     args = parse_args()
 
     try:
