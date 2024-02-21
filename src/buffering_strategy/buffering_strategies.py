@@ -65,8 +65,9 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         chunk_length_in_bytes = self.chunk_length_seconds * self.client.sampling_rate * self.client.samples_width
         if len(self.client.buffer) > chunk_length_in_bytes:
             if self.processing_flag:
-                # exit("Error in realtime processing: tried processing a new chunk while the previous one was still being processed")
-                print("上个转换任务还没有结束，跳过本次！！！" )
+                # exit("Error in realtime processing: tried processing a new chunk while the previous one was still
+                # being processed")
+                print("上个转换任务还没有结束，跳过本次！！！")
                 return
 
             self.client.scratch_buffer += self.client.buffer
@@ -107,8 +108,8 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
     async def get_chat_response_sync(self, messages) -> str:
         start = time.time()
+        print("开始GPT请求")
         client = AsyncOpenAI(base_url=self.base_url)
-        print("syncGPT 耗时0 = {:.3f} : ".format((time.time() - start)), messages)
         completion = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages
@@ -116,7 +117,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         print("syncGPT 耗时2 = {:.3f}".format(time.time() - start))
         result = (await completion).choices[0].message.content
         logging.info(f'request {messages} \nchat response {result}')
-        print("syncGPT 耗时3 = {:.3f}".format(time.time() - start))
+        print("GPT请求完成 耗时3 = {:.3f}".format(time.time() - start))
 
         return result
     
@@ -140,12 +141,14 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             self.client.buffer.clear()
             self.processing_flag = False
             return
+        print('检测到活动声音')
 
         last_segment_should_end_before = ((len(self.client.scratch_buffer) / (self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
         if vad_results[-1]['end'] < last_segment_should_end_before:
             transcription = await asr_pipeline.transcribe(self.client)
             if transcription['text'] != '':
                 end = time.time()
+                print(f'解析到声音内容： {transcription["text"]}， 耗时: {end - start}')
                 transcription['processing_time'] = end - start
                 json_transcription = json.dumps(transcription) 
                 await websocket.send(json_transcription)
