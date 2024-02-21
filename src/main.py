@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import json
+import logging
 
 from .server import Server
 from src.asr.asr_factory import ASRFactory
@@ -24,6 +25,7 @@ def parse_args():
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     args = parse_args()
 
     try:
