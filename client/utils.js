@@ -12,7 +12,7 @@ let globalStream;
 // 创建一个新的语音合成对象
 let SST ;
 
-const websocket_uri = 'ws://localhost:8765';
+const websocket_uri = 'ws://localhost:6006';
 const bufferSize = 4096;
 let isRecording = false;
 

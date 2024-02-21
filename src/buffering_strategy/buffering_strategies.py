@@ -109,17 +109,19 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
     async def get_chat_response_sync(self, messages) -> str:
         start = time.time()
         print("开始GPT请求")
-        client = AsyncOpenAI(base_url=self.base_url)
-        completion = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages
-        )
-        print("syncGPT 耗时2 = {:.3f}".format(time.time() - start))
-        result = (await completion).choices[0].message.content
-        logging.info(f'request {messages} \nchat response {result}')
-        print("GPT请求完成 耗时3 = {:.3f}".format(time.time() - start))
-
-        return result
+        try:
+            client = AsyncOpenAI(base_url=self.base_url)
+            completion = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+            print("syncGPT 耗时2 = {:.3f}".format(time.time() - start))
+            result = (await completion).choices[0].message.content
+            logging.info(f'request {messages} \nchat response {result}')
+            print("GPT请求完成 耗时3 = {:.3f}".format(time.time() - start))
+            return result
+        except Exception as e:
+            return repr(e)
     
     async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline):
         """
