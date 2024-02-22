@@ -7,3 +7,13 @@ class ASRInterface:
         :return: The transcription structure, see for example the faster_whisper_asr.py file.
         """
         raise NotImplementedError("This method should be implemented by subclasses.")
+
+    async def transcribe_file(self, file_path, language):
+        """
+        Transcribe the given audio data.
+
+        :param file_path: The voice file
+        :param language: The voice file
+        :return: The transcription structure, see for example the faster_whisper_asr.py file.
+        """
+        raise NotImplementedError("This method should be implemented by subclasses.")
