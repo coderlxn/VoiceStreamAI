@@ -8,6 +8,7 @@ import random
 import string
 import base64
 import openai
+import torch
 from src.asr.asr_factory import ASRFactory
 from transformers import pipeline
 from datasets import load_dataset
@@ -110,10 +111,10 @@ if __name__ == "__main__":
     asr_args = {"model_size": "large-v3"}
     asr_pipeline = ASRFactory.create_asr_pipeline('faster_whisper', **asr_args)
 
-    synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")
-
-    embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
-    speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+    # synthesiser = pipeline("text-to-speech", "microsoft/speecht5_tts")
+    #
+    # embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
+    # speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
 
     app.listen(6006)
     logging.info("sse服务启动")
