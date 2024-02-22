@@ -8,6 +8,7 @@ import random
 import string
 import base64
 import openai
+from openai import AsyncOpenAI
 import torch
 from src.asr.asr_factory import ASRFactory
 from transformers import pipeline
@@ -25,6 +26,8 @@ class VoiceChatRequest(tornado.web.RequestHandler):
         # 请求方式
         self.set_header("Access-Control-Allow-Methods", "*")
 
+        self.base_url = os.environ.get("OPENAI_BASE_URL")
+
     async def write_message(self, key):
         for idx in range(10):
             val = {"code": 200, "msg": "success", "data": f"{key} {idx}"}
@@ -34,15 +37,33 @@ class VoiceChatRequest(tornado.web.RequestHandler):
         await asyncio.sleep(1)
         return ''
 
+    async def get_chat_response_sync(self, messages) -> str:
+        start = time.time()
+        logging.debug("开始GPT请求")
+        try:
+            client = AsyncOpenAI(base_url=self.base_url)
+            completion = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages
+            )
+            logging.debug("syncGPT 耗时2 = {:.3f}".format(time.time() - start))
+            result = (await completion).choices[0].message.content
+            logging.info(f'request {messages} \nchat response {result}')
+            logging.debug("GPT请求完成 耗时3 = {:.3f}".format(time.time() - start))
+            return result
+        except Exception as e:
+            return repr(e)
+
     async def post(self):
         logging.info('new post request connect')
         # 接收文件
-        file = await self.request.files['file'][0]
+        file = self.request.files['file'][0]
+        logging.debug(f'file received {file}')
         original_fname = file['filename']
         extension = os.path.splitext(original_fname)[1]
         fname = ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(6))
         final_filename = fname+extension
-        file_path = "uploads/" + final_filename
+        file_path = final_filename
         output_file = open(file_path, 'wb')
         output_file.write(file['body'])
         if not os.path.exists(file_path):
@@ -54,12 +75,15 @@ class VoiceChatRequest(tornado.web.RequestHandler):
 
         # 解析音频到文字
         start = time.time()
-        transcription = asr_pipeline.transcribe_file(file_path, None)
+        transcription = await asr_pipeline.transcribe_file(file_path, None)
         if 'text' in transcription and transcription['text'] != '':
             end = time.time()
             text = transcription["text"]
             logging.debug(f'解析到声音内容： {text}， 耗时: {end - start}')
-            val = {"code": 200, "msg": 'success', 'text': text}
+
+            messages = [{"role": "user", "content": text}]
+            content = await self.get_chat_response_sync(messages)
+            val = {"code": 200, "msg": 'success', 'text': content}
             self.write(f'data:{val}\n\n')
             await self.flush()
 
@@ -67,7 +91,7 @@ class VoiceChatRequest(tornado.web.RequestHandler):
             response = client.audio.speech.create(
                 model="tts-1",
                 voice="alloy",
-                input=text,
+                input=content,
             )
 
             for data in response.iter_bytes():
