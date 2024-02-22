@@ -7,6 +7,7 @@ import time
 import random
 import string
 import base64
+import openai
 from src.asr.asr_factory import ASRFactory
 from transformers import pipeline
 from datasets import load_dataset
@@ -61,24 +62,38 @@ class VoiceChatRequest(tornado.web.RequestHandler):
             self.write(f'data:{val}\n\n')
             await self.flush()
 
-            speech = synthesiser("Hello, my dog is cooler than you!",
-                                 forward_params={"speaker_embeddings": speaker_embedding})
-            target_file = f"speech{random.randint(1000, 9999)}.wav"
-            sf.write(target_file, speech["audio"], samplerate=speech["sampling_rate"])
-            if not os.path.exists(target_file):
-                logging.warning('convert text to speech failed')
-                val = {"code": 500, "msg": 'convert text to speech failed'}
-                self.write(f'data:{val}\n\n')
-                return
+            client = openai.OpenAI()
+            response = client.audio.speech.create(
+                model="tts-1",
+                voice="alloy",
+                input=text,
+            )
 
-            with open(target_file, mode='rb') as f:
-                byte_array = f.read()
-                bytes_str = base64.b64encode(byte_array).decode('utf-8')
-                val = {"code": 200, "msg": 'success', 'text': bytes_str}
+            for data in response.iter_bytes():
+                # logging.debug(f'speech component: {data}')
+                bytes_str = base64.b64encode(data).decode('utf-8')
+                val = {"code": 200, "msg": 'success', 'audio': bytes_str}
                 self.write(f'data:{val}\n\n')
                 await self.flush()
-            # 删掉临时文件
-            os.remove(target_file)
+
+            # speech = synthesiser("Hello, my dog is cooler than you!",
+            #                      forward_params={"speaker_embeddings": speaker_embedding})
+            # target_file = f"speech{random.randint(1000, 9999)}.wav"
+            # sf.write(target_file, speech["audio"], samplerate=speech["sampling_rate"])
+            # if not os.path.exists(target_file):
+            #     logging.warning('convert text to speech failed')
+            #     val = {"code": 500, "msg": 'convert text to speech failed'}
+            #     self.write(f'data:{val}\n\n')
+            #     return
+            #
+            # with open(target_file, mode='rb') as f:
+            #     byte_array = f.read()
+            #     bytes_str = base64.b64encode(byte_array).decode('utf-8')
+            #     val = {"code": 200, "msg": 'success', 'text': bytes_str}
+            #     self.write(f'data:{val}\n\n')
+            #     await self.flush()
+            # # 删掉临时文件
+            # os.remove(target_file)
 
 
 def make_app():
