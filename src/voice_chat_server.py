@@ -11,9 +11,6 @@ import openai
 from openai import AsyncOpenAI
 import torch
 from src.asr.asr_factory import ASRFactory
-from transformers import pipeline
-from datasets import load_dataset
-import soundfile as sf
 
 
 class VoiceChatRequest(tornado.web.RequestHandler):
