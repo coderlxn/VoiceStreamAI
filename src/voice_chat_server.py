@@ -54,6 +54,12 @@ class VoiceChatRequest(tornado.web.RequestHandler):
     async def post(self):
         logging.info('new post request connect')
         # 接收文件
+        if 'file' not in self.request.files:
+            val = {"code": 400, "msg": 'file is required'}
+            self.write(f'data:{val}\n\n')
+            await self.flush()
+            return
+
         file = self.request.files['file'][0]
         logging.debug(f'file received {file}')
         original_fname = file['filename']
