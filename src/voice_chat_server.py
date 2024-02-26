@@ -93,37 +93,38 @@ class VoiceChatRequest(tornado.web.RequestHandler):
             self.write(f'data:{val}\n\n')
             await self.flush()
 
-            target_file = f"speech{random.randint(1000, 9999)}.wav"
-            tts.tts_to_file(text=content, speaker_wav="/root/TTS/tests/data/ljspeech/wavs/LJ001-0001.wav",
-                            language="zh-cn", file_path=target_file)
-            if not os.path.exists(target_file):
-                logging.warning('convert text to speech failed')
-                val = {"code": 500, "msg": 'convert text to speech failed'}
-                self.write(f'data:{val}\n\n')
-                return
+            if tts_source == 'openai':
+                client = openai.OpenAI()
+                response = client.audio.speech.create(
+                    model="tts-1",
+                    voice="alloy",
+                    input=content,
+                )
 
-            with open(target_file, mode='rb') as f:
-                byte_array = f.read()
-                bytes_str = base64.b64encode(byte_array).decode('utf-8')
-                val = {"code": 200, "msg": 'success', 'audio': bytes_str}
-                self.write(f'data:{val}\n\n')
-                await self.flush()
-            # 删掉临时文件
-            # os.remove(target_file)
+                for data in response.iter_bytes():
+                    # logging.debug(f'speech component: {data}')
+                    bytes_str = base64.b64encode(data).decode('utf-8')
+                    val = {"code": 200, "msg": 'success', 'audio': bytes_str}
+                    self.write(f'data:{val}\n\n')
+                    await self.flush()
+            else:
+                target_file = f"speech{random.randint(1000, 9999)}.wav"
+                tts.tts_to_file(text=content, speaker_wav="/root/TTS/tests/data/ljspeech/wavs/LJ001-0001.wav",
+                                language="zh-cn", file_path=target_file)
+                if not os.path.exists(target_file):
+                    logging.warning('convert text to speech failed')
+                    val = {"code": 500, "msg": 'convert text to speech failed'}
+                    self.write(f'data:{val}\n\n')
+                    return
 
-            # client = openai.OpenAI()
-            # response = client.audio.speech.create(
-            #     model="tts-1",
-            #     voice="alloy",
-            #     input=content,
-            # )
-
-            # for data in response.iter_bytes():
-            #     # logging.debug(f'speech component: {data}')
-            #     bytes_str = base64.b64encode(data).decode('utf-8')
-            #     val = {"code": 200, "msg": 'success', 'audio': bytes_str}
-            #     self.write(f'data:{val}\n\n')
-            #     await self.flush()
+                with open(target_file, mode='rb') as f:
+                    byte_array = f.read()
+                    bytes_str = base64.b64encode(byte_array).decode('utf-8')
+                    val = {"code": 200, "msg": 'success', 'audio': bytes_str}
+                    self.write(f'data:{val}\n\n')
+                    await self.flush()
+                # 删掉临时文件
+                os.remove(target_file)
 
 
 def make_app():
