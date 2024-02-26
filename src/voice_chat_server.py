@@ -10,6 +10,7 @@ import base64
 import openai
 from openai import AsyncOpenAI
 import torch
+from TTS.api import TTS
 from src.asr.asr_factory import ASRFactory
 
 
@@ -61,11 +62,11 @@ class VoiceChatRequest(tornado.web.RequestHandler):
             return
 
         file = self.request.files['file'][0]
-        logging.debug(f'file received {file}')
+        # logging.debug(f'file received {file}')
         original_fname = file['filename']
         extension = os.path.splitext(original_fname)[1]
         fname = ''.join(random.choice(string.ascii_lowercase + string.digits) for x in range(6))
-        final_filename = fname+extension
+        final_filename = fname + extension
         file_path = final_filename
         output_file = open(file_path, 'wb')
         output_file.write(file['body'])
@@ -90,38 +91,37 @@ class VoiceChatRequest(tornado.web.RequestHandler):
             self.write(f'data:{val}\n\n')
             await self.flush()
 
-            client = openai.OpenAI()
-            response = client.audio.speech.create(
-                model="tts-1",
-                voice="alloy",
-                input=content,
-            )
+            target_file = f"speech{random.randint(1000, 9999)}.wav"
+            tts.tts_to_file(text=content, speaker_wav="/root/TTS/tests/data/ljspeech/wavs/LJ001-0001.wav",
+                            language="zh-cn", file_path=target_file)
+            if not os.path.exists(target_file):
+                logging.warning('convert text to speech failed')
+                val = {"code": 500, "msg": 'convert text to speech failed'}
+                self.write(f'data:{val}\n\n')
+                return
 
-            for data in response.iter_bytes():
-                # logging.debug(f'speech component: {data}')
-                bytes_str = base64.b64encode(data).decode('utf-8')
+            with open(target_file, mode='rb') as f:
+                byte_array = f.read()
+                bytes_str = base64.b64encode(byte_array).decode('utf-8')
                 val = {"code": 200, "msg": 'success', 'audio': bytes_str}
                 self.write(f'data:{val}\n\n')
                 await self.flush()
+            # 删掉临时文件
+            # os.remove(target_file)
 
-            # speech = synthesiser("Hello, my dog is cooler than you!",
-            #                      forward_params={"speaker_embeddings": speaker_embedding})
-            # target_file = f"speech{random.randint(1000, 9999)}.wav"
-            # sf.write(target_file, speech["audio"], samplerate=speech["sampling_rate"])
-            # if not os.path.exists(target_file):
-            #     logging.warning('convert text to speech failed')
-            #     val = {"code": 500, "msg": 'convert text to speech failed'}
-            #     self.write(f'data:{val}\n\n')
-            #     return
-            #
-            # with open(target_file, mode='rb') as f:
-            #     byte_array = f.read()
-            #     bytes_str = base64.b64encode(byte_array).decode('utf-8')
-            #     val = {"code": 200, "msg": 'success', 'text': bytes_str}
+            # client = openai.OpenAI()
+            # response = client.audio.speech.create(
+            #     model="tts-1",
+            #     voice="alloy",
+            #     input=content,
+            # )
+
+            # for data in response.iter_bytes():
+            #     # logging.debug(f'speech component: {data}')
+            #     bytes_str = base64.b64encode(data).decode('utf-8')
+            #     val = {"code": 200, "msg": 'success', 'audio': bytes_str}
             #     self.write(f'data:{val}\n\n')
             #     await self.flush()
-            # # 删掉临时文件
-            # os.remove(target_file)
 
 
 def make_app():
@@ -142,6 +142,15 @@ if __name__ == "__main__":
     #
     # embeddings_dataset = load_dataset("Matthijs/cmu-arctic-xvectors", split="validation")
     # speaker_embedding = torch.tensor(embeddings_dataset[7306]["xvector"]).unsqueeze(0)
+
+    # Get device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # List available 🐸TTS models
+    print(TTS().list_models())
+
+    # Init TTS
+    tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
     app.listen(6006)
     logging.info("sse服务启动")
