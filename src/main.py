@@ -20,7 +20,7 @@ def parse_args():
     parser.add_argument("--asr-args", type=str, default='{"model_size": "large-v3"}',
                         help="JSON string of additional arguments for ASR pipeline")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host for the WebSocket server")
-    parser.add_argument("--port", type=int, default=8765, help="Port for the WebSocket server")
+    parser.add_argument("--port", type=int, default=6006, help="Port for the WebSocket server")
     return parser.parse_args()
 
 

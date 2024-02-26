@@ -13,7 +13,7 @@ class BufferingStrategyInterface:
         process_audio: Process audio data. This method should be implemented by subclasses.
     """
 
-    def process_audio(self, websocket, vad_pipeline, asr_pipeline):
+    def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts):
         """
         Process audio data using the given WebSocket connection, VAD pipeline, and ASR pipeline.
 
@@ -24,6 +24,7 @@ class BufferingStrategyInterface:
             websocket (Websocket): The WebSocket connection for communication with clients.
             vad_pipeline: The Voice Activity Detection (VAD) pipeline used for detecting speech in the audio.
             asr_pipeline: The Automatic Speech Recognition (ASR) pipeline used for transcribing speech in the audio.
+            asr_pipeline: tts uesed to genereate the audio
 
         Raises:
             NotImplementedError: If the method is not implemented in the subclass.

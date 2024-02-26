@@ -6,7 +6,7 @@ import openai
 from openai import AsyncOpenAI
 import logging
 import base64
-
+import random
 from .buffering_strategy_interface import BufferingStrategyInterface
 
 
@@ -52,7 +52,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         self.base_url = os.environ.get("OPENAI_BASE_URL")
         logging.debug("读取 OPENAI_BASE_URL = " + self.base_url)
 
-    async def process_audio(self, websocket, vad_pipeline, asr_pipeline):
+    async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts):
         """
         Process audio chunks by checking their length and scheduling asynchronous processing.
 
@@ -77,7 +77,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             # self.processing_flag = True
             # Schedule the processing in a separate task
             # asyncio.create_task(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
-            await self.process_audio_async(websocket, vad_pipeline, asr_pipeline)
+            await self.process_audio_async(websocket, vad_pipeline, asr_pipeline, tts)
 
             # loop = asyncio.get_event_loop()
             # result = loop.run_until_complete(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
@@ -140,8 +140,24 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             bytes_str = base64.b64encode(data).decode('utf-8')
             val = {'audio': bytes_str}
             await websocket.send(json.dumps(val))
+            
+    async def text_to_speech_tts(self, websocket, text, tts):
+        target_file = f"speech{random.randint(1000, 9999)}.wav"
+        tts.tts_to_file(text=text, speaker_wav="/root/TTS/tests/data/ljspeech/wavs/LJ001-0001.wav",
+                        language="zh-cn", file_path=target_file)
+        if not os.path.exists(target_file):
+            logging.warning('convert text to speech failed')
+            return
 
-    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline):
+        with open(target_file, mode='rb') as f:
+            byte_array = f.read()
+            bytes_str = base64.b64encode(byte_array).decode('utf-8')
+            val = {'audio': bytes_str}
+            await websocket.send(json.dumps(val))
+        # 删掉临时文件
+        os.remove(target_file)
+
+    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline, tts):
         """
         Asynchronously process audio for activity detection and transcription.
 
@@ -152,6 +168,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             websocket (Websocket): The WebSocket connection for sending transcriptions.
             vad_pipeline: The voice activity detection pipeline.
             asr_pipeline: The automatic speech recognition pipeline.
+            asr_pipeline: used general speech.
         """
         start = time.time()
         vad_results = await vad_pipeline.detect_activity(self.client)
@@ -190,7 +207,8 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 logging.info(f'set content to client {json_transcription}')
                 await websocket.send(json_transcription)
 
-                await self.text_to_speech(websocket, content)
+                # await self.text_to_speech(websocket, content)
+                await self.text_to_speech_tts(websocket, content, tts)
 
             self.client.scratch_buffer.clear()
             self.client.increment_file_counter()
