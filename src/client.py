@@ -1,3 +1,4 @@
+import logging
 from src.buffering_strategy.buffering_strategy_factory import BufferingStrategyFactory
 
 class Client:
@@ -25,16 +26,19 @@ class Client:
                        "processing_args": {
                            "chunk_length_seconds": 5, 
                            "chunk_offset_seconds": 0.1
-                           }
+                           },
+                       "tts_source": "coqui"
                        }
         self.file_counter = 0
         self.total_samples = 0
         self.sampling_rate = sampling_rate
         self.samples_width = samples_width
         self.buffering_strategy = BufferingStrategyFactory.create_buffering_strategy(self.config['processing_strategy'], self, **self.config['processing_args'])
+        self.tts_source = None
 
     def update_config(self, config_data):
         self.config.update(config_data)
+        logging.info(f'update config {self.config}')
         self.buffering_strategy = BufferingStrategyFactory.create_buffering_strategy(self.config['processing_strategy'], self, **self.config['processing_args'])
 
     def append_audio_data(self, audio_data):
@@ -51,4 +55,5 @@ class Client:
         return f"{self.client_id}_{self.file_counter}.wav"
     
     async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts):
-        await self.buffering_strategy.process_audio(websocket, vad_pipeline, asr_pipeline, tts)
+        tts = None if self.config['tts_source'] == 'openai' else tts
+        await self.buffering_strategy.process_audio(websocket, vad_pipeline, asr_pipeline,  tts)

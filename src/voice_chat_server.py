@@ -61,6 +61,8 @@ class VoiceChatRequest(tornado.web.RequestHandler):
             await self.flush()
             return
 
+        tts_source = self.request.headers.get('tts_source')
+
         file = self.request.files['file'][0]
         # logging.debug(f'file received {file}')
         original_fname = file['filename']

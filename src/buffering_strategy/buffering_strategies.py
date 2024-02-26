@@ -63,6 +63,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             websocket (Websocket): The WebSocket connection for sending transcriptions.
             vad_pipeline: The voice activity detection pipeline.
             asr_pipeline: The automatic speech recognition pipeline.
+            tts: audio generate
         """
         chunk_length_in_bytes = self.chunk_length_seconds * self.client.sampling_rate * self.client.samples_width
         if len(self.client.buffer) > chunk_length_in_bytes:
@@ -207,8 +208,10 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 logging.info(f'set content to client {json_transcription}')
                 await websocket.send(json_transcription)
 
-                # await self.text_to_speech(websocket, content)
-                await self.text_to_speech_tts(websocket, content, tts)
+                if tts is None:
+                    await self.text_to_speech(websocket, content)
+                else:
+                    await self.text_to_speech_tts(websocket, content, tts)
 
             self.client.scratch_buffer.clear()
             self.client.increment_file_counter()
