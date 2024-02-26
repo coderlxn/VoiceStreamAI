@@ -116,8 +116,26 @@ class FasterWhisperASR(ASRInterface):
 
     async def transcribe(self, client):
         file_path = await save_audio_to_file(client.scratch_buffer, client.get_file_name())
+
         language = None if client.config['language'] is None else language_codes.get(client.config['language'].lower())
-        return self.transcribe_file(file_path, language)
+        segments, info = self.asr_pipeline.transcribe(file_path, word_timestamps=True, language=language)
+
+        segments = list(segments)  # The transcription will actually run here.
+        os.remove(file_path)
+
+        flattened_words = [word for segment in segments for word in segment.words]
+
+        to_return = {
+            "language": info.language,
+            "language_probability": info.language_probability,
+            "text": ' '.join([s.text.strip() for s in segments]),
+            "words":
+                [
+                    {"word": w.word, "start": w.start, "end": w.end, "probability": w.probability} for w in
+                    flattened_words
+                ]
+        }
+        return to_return
 
     async def transcribe_file(self, file_path, language):
         segments, info = self.asr_pipeline.transcribe(file_path, word_timestamps=True, language=language)
