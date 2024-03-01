@@ -27,7 +27,8 @@ class Client:
                            "chunk_length_seconds": 5, 
                            "chunk_offset_seconds": 0.1
                            },
-                       "tts_source": "coqui"
+                       "tts_source": "coqui",
+                       "tone_id": 0
                        }
         self.file_counter = 0
         self.total_samples = 0

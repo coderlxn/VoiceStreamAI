@@ -52,7 +52,9 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         self.base_url = os.environ.get("OPENAI_BASE_URL")
         logging.debug("读取 OPENAI_BASE_URL = " + self.base_url)
 
-    async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts):
+        self.tone_file_location = os.environ.get("TONE_FILE_LOCATION") or "/root/VoiceStreamAI/tone/"
+
+    async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts, tone_id):
         """
         Process audio chunks by checking their length and scheduling asynchronous processing.
 
@@ -78,7 +80,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             # self.processing_flag = True
             # Schedule the processing in a separate task
             # asyncio.create_task(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
-            await self.process_audio_async(websocket, vad_pipeline, asr_pipeline, tts)
+            await self.process_audio_async(websocket, vad_pipeline, asr_pipeline, tts, tone_id)
 
             # loop = asyncio.get_event_loop()
             # result = loop.run_until_complete(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
@@ -142,9 +144,10 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             val = {'audio': bytes_str}
             await websocket.send(json.dumps(val))
             
-    async def text_to_speech_tts(self, websocket, text, tts):
+    async def text_to_speech_tts(self, websocket, text, tts, tone_id):
         target_file = f"speech{random.randint(1000, 9999)}.wav"
-        tts.tts_to_file(text=text, speaker_wav="/root/TTS/tests/data/ljspeech/wavs/LJ001-0001.wav",
+        speaker_file = f'{self.tone_file_location}tone_{tone_id}.wav'
+        tts.tts_to_file(text=text, speaker_wav=speaker_file,
                         language="zh-cn", file_path=target_file)
         if not os.path.exists(target_file):
             logging.warning('convert text to speech failed')
@@ -158,7 +161,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         # 删掉临时文件
         os.remove(target_file)
 
-    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline, tts):
+    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline, tts, tone_id):
         """
         Asynchronously process audio for activity detection and transcription.
 
@@ -211,7 +214,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 if tts is None:
                     await self.text_to_speech(websocket, content)
                 else:
-                    await self.text_to_speech_tts(websocket, content, tts)
+                    await self.text_to_speech_tts(websocket, content, tts, tone_id)
 
             self.client.scratch_buffer.clear()
             self.client.increment_file_counter()
