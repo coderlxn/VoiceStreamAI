@@ -57,4 +57,5 @@ class Client:
     
     async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts):
         tts = None if self.config['tts_source'] == 'openai' else tts
-        await self.buffering_strategy.process_audio(websocket, vad_pipeline, asr_pipeline,  tts)
+        await self.buffering_strategy.process_audio(websocket, vad_pipeline,
+                                                    asr_pipeline, tts, self.config['tone_id'])
