@@ -1,3 +1,5 @@
+import logging
+
 import websockets
 import uuid
 import json
@@ -54,6 +56,7 @@ class Server:
                 await client.process_audio(websocket, self.vad_pipeline, self.asr_pipeline, self.tts)
             elif isinstance(message, str):
                 config = json.loads(message)
+                logging.info(f'message received {config}')
                 if config.get('type') == 'config':
                     client.update_config(config['data'])
                     continue
