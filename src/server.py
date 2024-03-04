@@ -51,7 +51,7 @@ class Server:
 
             if isinstance(message, bytes):
                 # print(f"接收到新数据:{bytearray(bytes).hex()}")
-                logging.debug('[server] audio bytes received')
+                # logging.debug('[server] audio bytes received')
                 client.append_audio_data(message)
                 # this is synchronous, any async operation is in BufferingStrategy
                 await client.process_audio(websocket, self.vad_pipeline, self.asr_pipeline, self.tts)

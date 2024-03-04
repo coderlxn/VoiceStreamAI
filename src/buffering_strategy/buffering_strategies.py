@@ -69,7 +69,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             asr_pipeline: The automatic speech recognition pipeline.
             tts: audio generate
         """
-        logging.debug('[Strategies] Processing audio')
+        # logging.debug('[Strategies] Processing audio')
         chunk_length_in_bytes = self.chunk_length_seconds * self.client.sampling_rate * self.client.samples_width
         if len(self.client.buffer) > chunk_length_in_bytes:
             if self.processing_flag:
@@ -214,6 +214,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         vad_results = await vad_pipeline.detect_activity(self.client)
 
         if len(vad_results) == 0 or self.processing_flag:
+            logging.debug('[Strategies] processing data clear cache +++++++++++++')
             self.client.scratch_buffer.clear()
             self.client.buffer.clear()
             return
@@ -225,7 +226,9 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
         if vad_results[-1]['end'] < last_segment_should_end_before:
             transcription = await asr_pipeline.transcribe(self.client)
-            if transcription['text'] != '':
+            if transcription['language_probability'] < 0.7:
+                logging.info(f'[Strategies] language_probability too low {transcription["language_probability"]} ============================')
+            elif transcription['text'] != '':
                 end = time.time()
                 logging.info(f'[Strategies] 解析到声音内容： {transcription["text"]}， 耗时: {end - start} ------------------')
                 transcription['processing_time'] = end - start
