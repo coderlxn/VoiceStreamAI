@@ -161,7 +161,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
         target_file = f"speech{random.randint(1000, 9999)}.mp3"
         with open(target_file, 'wb') as out_file:
-            shutil.copyfileobj(response.raw, out_file)
+            shutil.copyfileobj(response.content, out_file)
 
         if not os.path.exists(target_file):
             logging.warning('convert text to speech failed')
