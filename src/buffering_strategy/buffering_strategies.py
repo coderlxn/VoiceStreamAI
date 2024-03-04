@@ -147,21 +147,23 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
     async def text_to_speech_http(self, websocket, text, tone_id):
         url = os.environ.get("TTS_SERVER") or 'http://localhost:6000/v1/audio/speech'
         if tone_id == 0:
-            tone_id = 9000
+            tone_id = 985
         elif tone_id == 1:
             tone_id = 984
         elif tone_id == 2:
             tone_id = 65
         elif tone_id == 3:
             tone_id = 92
-        response = requests.post(url, json={
+        req = {
             "input": text,
             "voice": f"{tone_id}"
-        })
+        }
+        logging.info(f'request body {req}')
+        response = requests.post(url, json=req)
 
         target_file = f"speech{random.randint(1000, 9999)}.mp3"
         with open(target_file, 'wb') as out_file:
-            shutil.copyfileobj(response.content, out_file)
+            out_file.write(response.content)
 
         if not os.path.exists(target_file):
             logging.warning('convert text to speech failed')
