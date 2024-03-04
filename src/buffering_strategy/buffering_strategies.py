@@ -226,7 +226,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
         if vad_results[-1]['end'] < last_segment_should_end_before:
             transcription = await asr_pipeline.transcribe(self.client)
-            if transcription['language_probability'] < 0.7:
+            if transcription['language_probability'] < 0.5:
                 logging.info(f'[Strategies] language_probability too low {transcription["language_probability"]} ============================')
             elif transcription['text'] != '':
                 end = time.time()
