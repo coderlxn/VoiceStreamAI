@@ -69,6 +69,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             asr_pipeline: The automatic speech recognition pipeline.
             tts: audio generate
         """
+        logging.debug('[Strategies] Processing audio')
         chunk_length_in_bytes = self.chunk_length_seconds * self.client.sampling_rate * self.client.samples_width
         if len(self.client.buffer) > chunk_length_in_bytes:
             if self.processing_flag:
@@ -82,6 +83,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             # self.processing_flag = True
             # Schedule the processing in a separate task
             # asyncio.create_task(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
+            logging.debug('[Strategies] Processing audio async')
             await self.process_audio_async(websocket, vad_pipeline, asr_pipeline, tts, tone_id)
 
             # loop = asyncio.get_event_loop()
@@ -216,7 +218,8 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             self.client.buffer.clear()
             return
 
-        logging.debug('检测到活动声音')
+        logging.debug('[Strategies] Active sound detected')
+
         self.processing_flag = True
         last_segment_should_end_before = ((len(self.client.scratch_buffer) / (
                 self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)

@@ -51,12 +51,13 @@ class Server:
 
             if isinstance(message, bytes):
                 # print(f"接收到新数据:{bytearray(bytes).hex()}")
+                logging.debug('[server] audio bytes received')
                 client.append_audio_data(message)
                 # this is synchronous, any async operation is in BufferingStrategy
                 await client.process_audio(websocket, self.vad_pipeline, self.asr_pipeline, self.tts)
             elif isinstance(message, str):
                 config = json.loads(message)
-                logging.info(f'message received {config}')
+                logging.info(f'--------message received {config}')
                 if config.get('type') == 'config':
                     client.update_config(config['data'])
                     continue

@@ -33,6 +33,7 @@ def should_log(record):
 def main():
     logging.basicConfig(level=logging.DEBUG)
     logging.getLogger("websockets").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
     args = parse_args()
 
     try:
