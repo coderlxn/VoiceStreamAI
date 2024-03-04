@@ -1,9 +1,8 @@
 import websockets
 import uuid
 import json
+import os
 import asyncio
-import torch
-from TTS.api import TTS
 from src.audio_utils import save_audio_to_file
 from src.client import Client
 
@@ -35,12 +34,21 @@ class Server:
         self.samples_width = samples_width
         self.connected_clients = {}
 
-        # Get device
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        # List available 🐸TTS models
-        print(TTS().list_models())
-        # Init TTS
-        self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+        tts_type = os.environ.get('TTS_TYPE')
+        if tts_type == "coqi":
+            import torch
+            from TTS.api import TTS
+            # Get device
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+            # List available 🐸TTS models
+            print(TTS().list_models())
+            # Init TTS
+            self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+        elif tts_type == "EmotiVoice":
+            self.tts = None
+        else:
+            raise ValueError("TTS_TYPE is needed for VoiceChat")
+
 
     async def handle_audio(self, client, websocket):
         while True:

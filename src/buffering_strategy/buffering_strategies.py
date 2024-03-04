@@ -1,5 +1,7 @@
 import os
 import asyncio
+import shutil
+import requests
 import json
 import time
 import openai
@@ -136,14 +138,43 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             input=text,
         )
 
-        # response.stream_to_file("output.mp3")
-
         for data in response.iter_bytes():
             # logging.debug(f'speech component: {data}')
             bytes_str = base64.b64encode(data).decode('utf-8')
             val = {'audio': bytes_str}
             await websocket.send(json.dumps(val))
-            
+
+    async def text_to_speech_http(self, websocket, text, tone_id):
+        url = os.environ.get("TTS_SERVER") or 'http://localhost:6000/v1/audio/speech'
+        if tone_id == 0:
+            tone_id = 9000
+        elif tone_id == 1:
+            tone_id = 984
+        elif tone_id == 2:
+            tone_id = 65
+        elif tone_id == 3:
+            tone_id = 92
+        response = requests.post(url, json={
+            "input": text,
+            "voice": f"{tone_id}"
+        })
+
+        target_file = f"speech{random.randint(1000, 9999)}.mp3"
+        with open(target_file, 'wb') as out_file:
+            shutil.copyfileobj(response.raw, out_file)
+
+        if not os.path.exists(target_file):
+            logging.warning('convert text to speech failed')
+            return
+
+        with open(target_file, mode='rb') as f:
+            byte_array = f.read()
+            bytes_str = base64.b64encode(byte_array).decode('utf-8')
+            val = {'audio': bytes_str}
+            await websocket.send(json.dumps(val))
+        # 删掉临时文件
+        os.remove(target_file)
+
     async def text_to_speech_tts(self, websocket, text, tts, tone_id):
         target_file = f"speech{random.randint(1000, 9999)}.wav"
         speaker_file = f'{self.tone_file_location}tone_{tone_id}.wav'
@@ -185,7 +216,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         logging.debug('检测到活动声音')
         self.processing_flag = True
         last_segment_should_end_before = ((len(self.client.scratch_buffer) / (
-                    self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
+                self.client.sampling_rate * self.client.samples_width)) - self.chunk_offset_seconds)
         if vad_results[-1]['end'] < last_segment_should_end_before:
             transcription = await asr_pipeline.transcribe(self.client)
             if transcription['text'] != '':
@@ -212,7 +243,10 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 await websocket.send(json_transcription)
 
                 if tts is None:
-                    await self.text_to_speech(websocket, content)
+                    if os.environ.get('TTS_TYPE') == "EmotiVoice":
+                        await self.text_to_speech_http(websocket, content, tone_id)
+                    else:
+                        await self.text_to_speech(websocket, content)
                 else:
                     await self.text_to_speech_tts(websocket, content, tts, tone_id)
 
