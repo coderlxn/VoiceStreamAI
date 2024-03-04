@@ -156,12 +156,13 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             tone_id = 92
         req = {
             "input": text,
-            "voice": f"{tone_id}"
+            "voice": f"{tone_id}",
+            "response_format": "wav"
         }
         logging.info(f'request body {req}')
         response = requests.post(url, json=req)
 
-        target_file = f"speech{random.randint(1000, 9999)}.mp3"
+        target_file = f"speech{random.randint(1000, 9999)}.wav"
         with open(target_file, 'wb') as out_file:
             out_file.write(response.content)
 
