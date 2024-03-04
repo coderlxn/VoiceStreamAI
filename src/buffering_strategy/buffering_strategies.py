@@ -227,7 +227,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             transcription = await asr_pipeline.transcribe(self.client)
             if transcription['text'] != '':
                 end = time.time()
-                logging.debug(f'解析到声音内容： {transcription["text"]}， 耗时: {end - start}')
+                logging.info(f'[Strategies] 解析到声音内容： {transcription["text"]}， 耗时: {end - start} ------------------')
                 transcription['processing_time'] = end - start
                 json_transcription = json.dumps(transcription)
                 logging.debug(f'send text to client： {json_transcription}')
@@ -260,3 +260,5 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             self.client.increment_file_counter()
 
         self.processing_flag = False
+
+        logging.debug('[Strategies] process audio async finished -------------------------')
