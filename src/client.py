@@ -56,7 +56,7 @@ class Client:
         return f"{self.client_id}_{self.file_counter}.wav"
     
     async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts):
-        tts = None if self.config['tts_source'] == 'openai' else tts
+        tts = None if self.config['tts_source'] == 'emoti' else tts
         tone_id = self.config['tone_id'] or 0
         await self.buffering_strategy.process_audio(websocket, vad_pipeline,
                                                     asr_pipeline, tts, tone_id)

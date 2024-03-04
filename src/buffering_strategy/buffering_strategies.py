@@ -246,10 +246,10 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 await websocket.send(json_transcription)
 
                 if tts is None:
-                    if os.environ.get('TTS_TYPE') == "EmotiVoice":
+                    # if os.environ.get('TTS_TYPE') == "EmotiVoice":
                         await self.text_to_speech_http(websocket, content, tone_id)
-                    else:
-                        await self.text_to_speech(websocket, content)
+                    # else:
+                    #     await self.text_to_speech(websocket, content)
                 else:
                     await self.text_to_speech_tts(websocket, content, tts, tone_id)
 
