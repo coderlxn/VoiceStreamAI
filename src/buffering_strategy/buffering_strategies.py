@@ -209,7 +209,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         target_file = f"speech{random.randint(1000, 9999)}.wav"
         speaker_file = f'{self.tone_file_location}tone_{tone_id}.wav'
         tts.tts_to_file(text=text, speaker_wav=speaker_file,
-                        language="zh-cn", file_path=target_file)
+                        language="en", file_path=target_file)  # zh-cn
         if not os.path.exists(target_file):
             logging.warning('convert text to speech failed')
             return
