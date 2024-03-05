@@ -148,14 +148,12 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
     async def text_to_speech_http(self, websocket, text, tone_id):
         url = os.environ.get("TTS_SERVER") or 'http://localhost:6000/v1/audio/speech'
-        if tone_id == 0:
-            tone_id = 985
-        elif tone_id == 1:
-            tone_id = 984
-        elif tone_id == 2:
-            tone_id = 65
-        elif tone_id == 3:
-            tone_id = 92
+        # Males: 1025 / 1028 / 6097 / 9000 / 9017
+        # Females: 65 / 102 / 1012 / 1088 / 1093
+        logging.info(f"text_to_speech_http {text} {tone_id}")
+        tone_map = {0: 1025, 1: 1028, 2: 6097, 3: 9000, 4: 9017, 5: 65, 6: 102, 7: 1012, 8: 1088, 9: 1093}
+        if tone_id in tone_map:
+            tone_id = tone_map[tone_id]
         req = {
             "input": text,
             "voice": f"{tone_id}",
