@@ -82,9 +82,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
         self.tone_file_location = os.environ.get("TONE_FILE_LOCATION") or "/root/VoiceStreamAI/tone/"
 
-        self.history = []
-
-    async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts, tone_id):
+    async def process_audio(self, websocket, vad_pipeline, asr_pipeline, tts, tone_id, history):
         """
         Process audio chunks by checking their length and scheduling asynchronous processing.
 
@@ -112,7 +110,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             # Schedule the processing in a separate task
             # asyncio.create_task(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
             logging.debug('[Strategies] Processing audio async')
-            await self.process_audio_async(websocket, vad_pipeline, asr_pipeline, tts, tone_id)
+            await self.process_audio_async(websocket, vad_pipeline, asr_pipeline, tts, tone_id, history)
 
             # loop = asyncio.get_event_loop()
             # result = loop.run_until_complete(self.process_audio_async(websocket, vad_pipeline, asr_pipeline))
@@ -224,7 +222,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         # 删掉临时文件
         os.remove(target_file)
 
-    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline, tts, tone_id):
+    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline, tts, tone_id, histories):
         """
         Asynchronously process audio for activity detection and transcription.
 
@@ -265,9 +263,10 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
 
                 # 从GPT获取数据
                 start = time.time()
+                logging.debug(f"history list {histories}")
 
                 messages = [sys_info]
-                for history in self.history:
+                for history in histories:
                     if history.startswith('resp:'):
                         messages.append({"role": "assistant", "content": history[5:]})
                     elif history.startswith('user:'):
@@ -277,8 +276,8 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 # content = await self.get_chat_response_sync(messages)
                 end = time.time()
                 logging.debug("GPT 总耗时 = {:.3f}".format(end - start))
-                self.history.append(f"user:{transcription['text']}")
-                self.history.append(f"resp:{content}")
+                histories.append(f"user:{transcription['text']}")
+                histories.append(f"resp:{content}")
 
                 # result = {'ai_resp': content, 'text': content, 'processing_time': end - start}
                 result = {'text': content, 'processing_time': end - start}

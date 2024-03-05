@@ -36,6 +36,7 @@ class Client:
         self.samples_width = samples_width
         self.buffering_strategy = BufferingStrategyFactory.create_buffering_strategy(self.config['processing_strategy'], self, **self.config['processing_args'])
         self.tts_source = None
+        self.history = []
 
     def update_config(self, config_data):
         self.config.update(config_data)
@@ -59,4 +60,4 @@ class Client:
         tts = None if self.config['tts_source'] == 'emoti' else tts
         tone_id = self.config['tone_id'] or 0
         await self.buffering_strategy.process_audio(websocket, vad_pipeline,
-                                                    asr_pipeline, tts, tone_id)
+                                                    asr_pipeline, tts, tone_id, self.history)
