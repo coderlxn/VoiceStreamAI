@@ -1,4 +1,5 @@
 import os
+import re
 import asyncio
 import shutil
 import requests
@@ -209,7 +210,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         target_file = f"speech{random.randint(1000, 9999)}.wav"
         speaker_file = f'{self.tone_file_location}tone_{tone_id}.wav'
         tts.tts_to_file(text=text, speaker_wav=speaker_file,
-                        language="en", file_path=target_file)  # zh-cn
+                        file_path=target_file)  # language="zh-cn", speaker_wav=speaker_file,
         if not os.path.exists(target_file):
             logging.warning('convert text to speech failed')
             return
@@ -285,7 +286,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 logging.info(f'set content to client {json_transcription}')
                 await websocket.send(json_transcription)
 
-                if tts is None:
+                if tts is None or re.search(u'[\u4e00-\u9fff]', content):
                     # if os.environ.get('TTS_TYPE') == "EmotiVoice":
                         await self.text_to_speech_http(websocket, content, tone_id)
                     # else:

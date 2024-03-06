@@ -42,7 +42,7 @@ class Server:
         # List available 🐸TTS models
         print(TTS().list_models())
         # Init TTS
-        self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+        self.tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
 
     async def handle_audio(self, client, websocket):
