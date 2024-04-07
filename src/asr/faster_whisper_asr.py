@@ -137,7 +137,7 @@ class FasterWhisperASR(ASRInterface):
         }
         return to_return
 
-    async def transcribe_file(self, file_path, language):
+    def transcribe_file(self, file_path, language):
         segments, info = self.asr_pipeline.transcribe(file_path, word_timestamps=True, language=language)
         segments = list(segments)  # The transcription will actually run here.
         os.remove(file_path)

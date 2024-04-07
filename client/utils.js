@@ -28,6 +28,7 @@ function initWebSocket() {
         return;
     }
 
+
     websocket = new WebSocket(websocketAddress);
     websocket.onopen = () => {
         console.log("WebSocket connection established");
