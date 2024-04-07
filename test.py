@@ -12,5 +12,5 @@ if __name__ == '__main__':
 
     asr_pipeline = ASRFactory.create_asr_pipeline(asr_type, **{'model_type': asr_model_type})
 
-    transcription = asr_pipeline.transcribe_file("audio_debug/1e8df508b000d1a5df741db9284c858e_127446.wav", "zh")
+    transcription = asr_pipeline.transcribe_file("audio_debug/1e8df508b000d1a5df741db9284c858e_132823.wav", "zh")
     print(transcription)
